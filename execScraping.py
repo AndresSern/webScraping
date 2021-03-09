@@ -10,7 +10,7 @@ class QuotesSpider(Spider):
     """ Class to do scprapping to a page """
     name = 'quotes'
     start_urls = ["https://intranet.hbtn.io/auth/sign_in/"]
-    #password = getpass()
+    password = getpass()
 
     def replaceWords(self, argument):
         pass
@@ -24,7 +24,7 @@ class QuotesSpider(Spider):
                                                  'user[login]':
                                                    '2207@holbertonschool.com',
                                                    'user[password]':
-                                                   "NocheTriste11021",
+                                                   self.password,
                                                    'commit':'Log in'},
                                          callback=self.scrape_210_page)
     def scrape_210_page(self, response):
