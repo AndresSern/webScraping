@@ -38,26 +38,25 @@ class QuotesSpider(Spider):
         """ Scraping the page with the general, read and watch and the
         exericise"""
 
-        with open("scraping.txt", "w") as scrapTxt:
+        with open("scraping2.txt", "w") as scrapTxt:
 
             FileWrite = scrapTxt.write
+            wordReplace = self.wordReplace
             title = response.xpath(f"//h1[@class='gap']/text()").get()
-            general = response.xpath(f"//div[@id='project-description']/ul[3]").get()
-            general = general.replace("<li>","\t<li>").replace("ul>", "ol>")
-            resources = response.xpath(f"//div[@id='project-description']/ul[1]").get()
-            resources = resources.replace("<li>", "\t<li>").replace("ul>", "ol>")
-            FileWrite(f"# {title}\n\n")
-            FileWrite(f"## GENERAL:\n\n {general}\n\n")
-            FileWrite(f"## RESOURCES:\n\n {resources}\n\n")
-            FileWrite("## INTRODUCTION TO FILES:\n\n")
+            general = wordReplace("general", response, 2)
+            resources = wordReplace("resources", response, 1)
+            descriptionFiles = []
             count = 0
+
+            FileWrite(f"# {title}\n\n")
+            FileWrite("## GENERAL " + ":open_book:" * 3 + f":\n\n {general}\n\n")
+            FileWrite(f"## RESOURCES:\n\n {resources}\n\n")
+
+            FileWrite("## INTRODUCTION TO FILES " + ":closed_book:" * 3 + ":\n\n")
 
             for j in range(0, 100):
 
                 numberOfTask =  response.xpath(f"//div[@id='task-num-{j}']/@data-role").extract_first()
-
-                if(not numberOfTask):
-                    break
 
                 if (numberOfTask):
 
@@ -69,44 +68,43 @@ class QuotesSpider(Spider):
 
                 if checkIfIDid.find("yes") != -1:
 
+                    dictFiles = {}
+
                     nameFile =  response.xpath(f"//div[@id='task-num-{j}']/div/div/div/ul/li[3]/code/text()").get()
-                    titleDesc = response.xpath(f"//div[@id='task-num-{j}']/div/div/p").getall()
-                    titleDesc = "".join(titleDesc).replace("Write a","").replace("<p>","")
-                    titleDesc = titleDesc.replace("Write a function","A function")
-                    titleDesc = titleDesc.replace("</p>","").replace("Write an","An")
+                    titleDesc = wordReplace("titleDesc", response, j)
+                    codeExample = response.xpath(f"//div[@id='task-num-{j}']/div/div/pre").get()
+
+                    dictFiles["nameFile"] = nameFile
+                    dictFiles["titleDesc"] = titleDesc
+                    dictFiles["codeExample"] = codeExample
+                    descriptionFiles.append(dictFiles)
 
                     removingPoint = nameFile.replace(".", "")
+                    titleDesc = titleDesc.replace("<p>","").replace("</p>","")
+
                     FileWrite(f'{count}.\t[**{nameFile}**:](#{removingPoint}) {titleDesc}\n')
                     count = count + 1
 
-            FileWrite("## FILES:\n\n")
+            FileWrite("\n## FILES " + ":bookmark_tabs:" * 3 + ":\n\n")
 
-            for i in range(0, 100):
+            for item in descriptionFiles:
+                """ Loop to write description about files with, the name of file
+                    example of code, and what do the code"""
+                FileWrite(f"### {item['nameFile']}\n\n")
+                FileWrite(f"**{item['titleDesc']}**\n\n")
+                FileWrite(f"{item['codeExample']}\n\n")
 
-                numberOfTask =  response.xpath(f"//div[@id='task-num-{i}']/@data-role").extract_first()
+    def wordReplace(self, name, response, i):
+        if name == "general" or name == "resources":
+            target = response.xpath(f"//div[@id='project-description']/ul[{i}]").get()
+            target = target.replace("<li>","\t<li>").replace("ul>", "ol>")
+            return target
+        if name == "titleDesc":
 
-                if(not numberOfTask):
-                    break
-
-                if (numberOfTask):
-                    idTask =  int((re.findall(r'\d+', numberOfTask))[0])
-                    checkIfIDid = response.xpath(f"//button[@data-task-id={idTask}]/@class").extract_first()
-
-                if checkIfIDid.find("yes") != -1:
-
-                    nameFile = response.xpath(f"//div[@id='task-num-{i}']/div/div/div/ul/li[3]/code/text()").get()
-                    titleDesc = response.xpath(f"//div[@id='task-num-{i}']/div/div/p").getall()
-                    titleDesc = "".join(titleDesc).replace("Write a function", "Function")
-                    titleDesc = titleDesc.replace("Write a ","").replace("Write an","An")
-                    desc  =  response.xpath(f"//div[@id='task-num-{i}']/div/div/ul").getall()
-                    example =   response.xpath(f"//div[@id='task-num-{i}']/div/div/pre").get()
-                    FileWrite(f"### {nameFile}\n\n")
-                    FileWrite(f"*{titleDesc}*\n\n")
-                    if desc:
-                        desc = "\n".join(desc).replace("<li>", "\t<li>")
-                        desc = desc.replace("\n\t<li>You are not allowed to import any module</li>", "")
-                        desc = desc.replace("You must use","Must")
-                        desc = desc.replace("You are","It is").replace("Your ","")
-                        desc = desc.replace("Write a ","")
-                        FileWrite(f"{desc}\n\n")
-                    FileWrite(f"{example}\n\n")
+            titleDesc = response.xpath(f"//div[@id='task-num-{i}']/div/div/p").getall()
+            titleDesc = "".join(titleDesc).replace("Write a function", "Function")
+            titleDesc = titleDesc.replace("Write a ","").replace("Write an","An")
+            titleDesc = titleDesc.replace("<strong>No test cases needed</strong>", "")
+            titleDesc = titleDesc[0:3] + titleDesc[3].upper() + titleDesc[4:]
+            titleDesc = titleDesc.replace(":","")
+            return titleDesc
